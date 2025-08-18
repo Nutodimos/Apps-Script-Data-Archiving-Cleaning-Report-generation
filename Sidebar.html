@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top" />
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        padding: 16px;
+      }
+      h2,
+      h3 {
+        font-size: 18px;
+        margin-bottom: 10px;
+      }
+      h3 {
+        font-size: 16px;
+        margin-top: 20px;
+      }
+      button {
+        display: block;
+        width: 100%;
+        margin-bottom: 10px;
+        padding: 10px;
+        background-color: #4285f4;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+      }
+      button:hover {
+        background-color: #3367d6;
+      }
+      button:disabled {
+        background-color: #ccc;
+        cursor: not-allowed;
+      }
+      label {
+        display: block;
+        margin-top: 10px;
+        margin-bottom: 5px;
+        font-weight: bold;
+      }
+      input,
+      select {
+        width: 100%;
+        padding: 8px;
+        margin-bottom: 10px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        box-sizing: border-box;
+      }
+      #status {
+        margin-top: 12px;
+        padding: 8px;
+        border-radius: 4px;
+        background-color: #e9f5ff;
+        color: #0366d6;
+        font-size: 13px;
+      }
+      .section {
+        border: 1px solid #ddd;
+        padding: 12px;
+        margin-top: 16px;
+        border-radius: 6px;
+        background-color: #f9f9f9;
+      }
+      .success {
+        color: #1e7e34;
+        background-color: #d4edda;
+      }
+      .error {
+        color: #721c24;
+        background-color: #f8d7da;
+      }
+      .loading {
+        color: #0c5460;
+        background-color: #d1ecf1;
+      }
+    </style>
+  </head>
+  <body>
+    <h2>Data Automation Tools</h2>
+
+    <div class="section">
+      <button onclick="runFunction('setupSheets')">🛠️ Setup Sheets</button>
+      <button onclick="runFunction('processAndArchiveData')">
+        📦 Archive & Clean Data
+      </button>
+      <button id="reportBtn" onclick="generateReport()">
+        📊 Generate Report
+      </button>
+    </div>
+
+    <div id="status">Ready</div>
+
+    <div class="section">
+      <h3>Define Value Levels</h3>
+      <p style="font-size: 12px; color: #666">
+        Values will be classified as High, Medium, or Low based on these
+        thresholds.
+      </p>
+
+      <label for="high">High Value Threshold</label>
+      <input type="number" id="high" placeholder="e.g., 1000" />
+
+      <label for="medium">Medium Value Threshold</label>
+      <input type="number" id="medium" placeholder="e.g., 500" />
+
+      <label for="low">Low Value Threshold</label>
+      <input type="number" id="low" placeholder="e.g., 0" />
+
+      <button id="saveThresholdsBtn" onclick="saveThresholds()">
+        Save Thresholds
+      </button>
+    </div>
+
+    <div class="section">
+      <h3>Report Settings</h3>
+
+      <label for="archiveSelect">Select Archive Sheet:</label>
+      <select id="archiveSelect">
+        <option value="">Loading archives...</option>
+      </select>
+
+      <label for="chartType">Chart Type:</label>
+      <select id="chartType">
+        <option value="none">None</option>
+        <option value="pie">Pie Chart</option>
+        <option value="bar">Column Chart</option>
+      </select>
+
+      <button id="saveChartBtn" onclick="saveChartPreference()">
+        Save Chart Preference
+      </button>
+    </div>
+
+    <script>
+      function updateStatus(message, type = "default") {
+        const statusDiv = document.getElementById("status");
+        statusDiv.textContent = message;
+
+        // Remove all classes first
+        statusDiv.className = "";
+
+        // Add appropriate class based on type
+        if (type === "error") {
+          statusDiv.className = "error";
+        } else if (type === "success") {
+          statusDiv.className = "success";
+        } else if (type === "loading") {
+          statusDiv.className = "loading";
+        }
+      }
+
+      function disableButton(buttonId, disabled = true) {
+        const button = document.getElementById(buttonId);
+        if (button) {
+          button.disabled = disabled;
+        }
+      }
+
+      function runFunction(fnName) {
+        updateStatus("Running " + fnName + "...", "loading");
+        google.script.run
+          .withSuccessHandler(() => {
+            updateStatus(fnName + " completed successfully.", "success");
+            // Refresh archive list after processing data
+            if (fnName === "processAndArchiveData") {
+              populateArchiveDropdown();
+            }
+          })
+          .withFailureHandler((err) => {
+            updateStatus("Error: " + err.message, "error");
+          })
+          [fnName]();
+      }
+
+      function loadThresholds() {
+        console.log("Loading thresholds...");
+        updateStatus("Loading settings...", "loading");
+
+        google.script.run
+          .withSuccessHandler((thresholds) => {
+            console.log("Received thresholds:", thresholds);
+            document.getElementById("high").value = thresholds.high || 1000;
+            document.getElementById("medium").value = thresholds.medium || 500;
+            document.getElementById("low").value = thresholds.low || 0;
+            updateStatus("Settings loaded successfully.", "success");
+          })
+          .withFailureHandler((err) => {
+            console.error("Failed to load thresholds:", err);
+            updateStatus("Failed to load settings: " + err.message, "error");
+          })
+          .getThresholds();
+      }
+
+      function loadChartPreference() {
+        google.script.run
+          .withSuccessHandler((chartType) => {
+            console.log("Loaded chart preference:", chartType);
+            document.getElementById("chartType").value = chartType || "none";
+          })
+          .withFailureHandler((err) => {
+            console.error("Failed to load chart preference:", err);
+          })
+          .getChartPreference();
+      }
+
+      function saveThresholds() {
+        const high = Number(document.getElementById("high").value);
+        const medium = Number(document.getElementById("medium").value);
+        const low = Number(document.getElementById("low").value);
+
+        if (isNaN(high) || isNaN(medium) || isNaN(low)) {
+          updateStatus(
+            "Error: All threshold values must be valid numbers.",
+            "error"
+          );
+          return;
+        }
+
+        if (high <= medium || medium <= low) {
+          updateStatus(
+            "Error: High threshold must be > Medium threshold > Low threshold.",
+            "error"
+          );
+          return;
+        }
+
+        const thresholds = { high, medium, low };
+
+        console.log("Saving thresholds:", thresholds);
+        updateStatus("Saving thresholds...", "loading");
+        disableButton("saveThresholdsBtn", true);
+
+        google.script.run
+          .withSuccessHandler(() => {
+            updateStatus("Thresholds saved successfully!", "success");
+            console.log("Thresholds saved successfully");
+            disableButton("saveThresholdsBtn", false);
+          })
+          .withFailureHandler((err) => {
+            updateStatus("Failed to save thresholds: " + err.message, "error");
+            console.error("Failed to save thresholds:", err);
+            disableButton("saveThresholdsBtn", false);
+          })
+          .saveThresholds(thresholds);
+      }
+
+      function saveChartPreference() {
+        const chartType = document.getElementById("chartType").value;
+        console.log("Saving chart preference:", chartType);
+        updateStatus("Saving chart preference...", "loading");
+        disableButton("saveChartBtn", true);
+
+        google.script.run
+          .withSuccessHandler(() => {
+            updateStatus("Chart preference saved successfully!", "success");
+            disableButton("saveChartBtn", false);
+          })
+          .withFailureHandler((err) => {
+            updateStatus(
+              "Failed to save chart preference: " + err.message,
+              "error"
+            );
+            disableButton("saveChartBtn", false);
+          })
+          .saveChartPreference(chartType);
+      }
+
+      function generateReport() {
+        console.log("Starting report generation...");
+        updateStatus(
+          "Generating report... This may take a few moments.",
+          "loading"
+        );
+        disableButton("reportBtn", true);
+
+        const chartType = document.getElementById("chartType").value;
+        const archiveName = document.getElementById("archiveSelect").value;
+
+        if (!archiveName) {
+          updateStatus("Please select an archive sheet first.", "error");
+          disableButton("reportBtn", false);
+          return;
+        }
+
+        google.script.run
+          .withSuccessHandler(() => {
+            updateStatus("Report generated successfully!", "success");
+            disableButton("reportBtn", false);
+            console.log("Report generation completed successfully");
+          })
+          .withFailureHandler((error) => {
+            updateStatus("Report generation failed: " + error.message, "error");
+            disableButton("reportBtn", false);
+            console.error("Report generation failed:", error);
+          })
+          .generateDailyReport(chartType, archiveName);
+      }
+
+      function populateArchiveDropdown() {
+        console.log("Loading archive sheets...");
+        const dropdown = document.getElementById("archiveSelect");
+        dropdown.innerHTML = '<option value="">Loading archives...</option>';
+
+        google.script.run
+          .withSuccessHandler(function (sheetNames) {
+            console.log("Received archive sheets:", sheetNames);
+            dropdown.innerHTML = ""; // Clear existing options
+
+            if (sheetNames.length === 0) {
+              const option = document.createElement("option");
+              option.value = "";
+              option.textContent = "No archive sheets found";
+              option.disabled = true;
+              dropdown.appendChild(option);
+            } else {
+              sheetNames.forEach((name) => {
+                const option = document.createElement("option");
+                option.value = name;
+                option.textContent = name;
+                dropdown.appendChild(option);
+              });
+              // Select the most recent archive by default
+              if (sheetNames.length > 0) {
+                dropdown.value = sheetNames[sheetNames.length - 1];
+              }
+            }
+          })
+          .withFailureHandler(function (error) {
+            console.error("Failed to load archive sheets:", error);
+            dropdown.innerHTML =
+              '<option value="">Error loading archives</option>';
+          })
+          .getArchiveSheetNames();
+      }
+
+      // Load settings when sidebar opens
+      window.onload = function () {
+        console.log("Sidebar loading...");
+        loadThresholds();
+        loadChartPreference();
+        populateArchiveDropdown();
+      };
+    </script>
+  </body>
+</html>
