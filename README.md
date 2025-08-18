@@ -1,6 +1,6 @@
-# Apps-Script-Data-Automation
 
-Automated Data Cleaning & Reporting System
+
+#Automated Data Cleaning & Reporting System
 This Google Apps Script project provides an automated solution for cleaning, standardizing, classifying, and reporting on data within a Google Sheet. It was originally developed for an e-commerce company to streamline their data management workflows.
 Features
 •	Automated Data Cleaning: Cleans and standardizes messy data (names, emails, timestamps) with a single click.
