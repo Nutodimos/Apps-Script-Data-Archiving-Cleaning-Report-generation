@@ -1,6 +1,7 @@
 # Apps-Script-Data-Automation
 
-#Automated Data Cleaning & Reporting System
+#Automated Data Cleaning & Reporting System: 
+
 This Google Apps Script project provides an automated solution for cleaning, standardizing, classifying, and reporting on data within a Google Sheet. It was originally developed for an e-commerce company to streamline their data management workflows.
 Features
 •	Automated Data Cleaning: Cleans and standardizes messy data (names, emails, timestamps) with a single click.
@@ -15,7 +16,8 @@ This project is intended to be used within a Google Sheet. The simplest way to u
 1.	Create a New Google Sheet: Go to sheets.new.
 2.	Open Apps Script: In the Google Sheet, navigate to Extensions > Apps Script.
 3.	Copy the Code: Copy the contents of Code.gs and Sidebar.html into your new Apps Script project.
-4.	Run the Script: In the Apps Script editor, save the project and run the onOpen() function to display the sidebar.
+4.	Run the Script: In the Apps Script editor, save the project and run the Data automation function.
+5.	Open the Google Sheet: In the Google Sheet press the data automation tab, the click on open sidebar.
 
 Technology Stack
 •	Google Apps Script: The core backend scripting language.
